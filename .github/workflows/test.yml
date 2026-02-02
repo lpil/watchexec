@@ -17,7 +17,11 @@ jobs:
           otp-version: "28"
           gleam-version: "1.14.0"
           rebar3-version: "3"
-      - run: sudo apt-get update && sudo apt-get install --yes watchexec
+      - name: Install watchexec
+        run: |
+          wget https://github.com/watchexec/watchexec/releases/latest/download/watchexec-latest-x86_64-unknown-linux-musl.tar.xz
+          tar xf watchexec-latest-x86_64-unknown-linux-musl.tar.xz
+          sudo mv watchexec-*-x86_64-unknown-linux-musl/watchexec /usr/local/bin/
       - run: gleam deps download
       - run: gleam test
       - run: gleam format --check src test
