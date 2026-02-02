@@ -19,9 +19,10 @@ jobs:
           rebar3-version: "3"
       - name: Install watchexec
         run: |
-          wget https://github.com/watchexec/watchexec/releases/latest/download/watchexec-latest-x86_64-unknown-linux-musl.tar.xz
-          tar xf watchexec-latest-x86_64-unknown-linux-musl.tar.xz
-          sudo mv watchexec-*-x86_64-unknown-linux-musl/watchexec /usr/local/bin/
+          wget https://github.com/watchexec/watchexec/releases/download/v2.3.3/watchexec-2.3.3-x86_64-unknown-linux-musl.tar.xz
+          tar xf *.tar.xz
+          chmod +x watchexec-*/watchexec
+          sudo mv watchexec-*/watchexec /usr/local/bin/
       - run: gleam deps download
       - run: gleam test
       - run: gleam format --check src test
