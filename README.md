@@ -7,6 +7,11 @@ Use watchexec as a cross-platform file event watcher on the BEAM!
 
 The watchexec program needs to be installed for this code to be usable.
 
+Watchexec is run on the command line with an Erlang port, so no NIF is
+required. This means there's no complex native-code compilation build-step, and
+there's no chance of a bug in the native code breaking down the virtual
+machine.
+
 ```sh
 gleam add watchexec@1
 ```
