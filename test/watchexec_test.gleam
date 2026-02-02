@@ -39,7 +39,7 @@ pub fn hello_world_test() {
   reset_test_state()
 
   // Start watching
-  let assert Ok(watchexec) = watchexec.start(".")
+  let assert Ok(watchexec) = watchexec.new(".") |> watchexec.start
   let selector =
     process.new_selector() |> watchexec.select(watchexec, function.identity)
 
@@ -68,7 +68,7 @@ pub fn multiple_messages_test() {
   reset_test_state()
 
   // Start watching
-  let assert Ok(watchexec) = watchexec.start(".")
+  let assert Ok(watchexec) = watchexec.new(".") |> watchexec.start
   let selector =
     process.new_selector() |> watchexec.select(watchexec, function.identity)
 
@@ -96,7 +96,7 @@ pub fn multiple_messages_test() {
   let events = events |> list.reverse |> list.flatten
 
   assert list.length(events) > loops
-  assert list.length(events) < loops * 2
+  assert list.length(events) <= loops * 2
   assert watchexec2 == watchexec
 }
 

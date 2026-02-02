@@ -5,12 +5,11 @@ import gleam/list
 import gleam/result
 import sceall
 
-// TODO: document
+/// An instance of the watchexec command line program running.
 pub opaque type WatchexecInstance {
   WatchexecInstance(program: sceall.ProgramHandle, buffer: BitArray)
 }
 
-// TODO: document
 pub type WatchexecError {
   /// The watchexec binary was not found on the `PATH`.
   WatchexecExecutableNotFound
@@ -45,7 +44,7 @@ pub type WatchexecError {
   WatchexecUnexpectedOutput(output: BitArray)
 }
 
-// TODO: document
+/// A file-system event reported by watchexec.
 pub type FileEvent {
   FileEvent(action: FileAction, path: String)
 }
@@ -86,29 +85,75 @@ pub type FileAction {
   Other
 }
 
-// TODO: document
+/// File system event data sent by a watchexec instance. Parse this data with
+/// `parse_data`.
+///
 pub opaque type WatchexecData {
   WatchexecData(message: sceall.ProgramMessage)
 }
 
-// TODO: test
-// TODO: document
+pub opaque type WatchexecBuilder {
+  WatchexecBuilder(
+    watched: List(String),
+    filters: List(String),
+    ignores: List(String),
+  )
+}
+
+/// Build configuration for a watchexec instance, with an initial path to
+/// watch.
+pub fn new(watching path: String) -> WatchexecBuilder {
+  WatchexecBuilder(watched: [path], filters: [], ignores: [])
+}
+
+/// Add an additional path to watch.
+pub fn watch(builder: WatchexecBuilder, path: String) -> WatchexecBuilder {
+  WatchexecBuilder(..builder, watched: [path, ..builder.watched])
+}
+
+/// Add a glob-like pattern to filter events for. Multiple patterns can be
+/// given by using this function multiple times.
+pub fn filter(builder: WatchexecBuilder, pattern: String) -> WatchexecBuilder {
+  WatchexecBuilder(..builder, filters: [pattern, ..builder.filters])
+}
+
+/// Add a glob-like pattern to ignore events for. Multiple patterns can be
+/// given by using this function multiple times.
+pub fn ignore(builder: WatchexecBuilder, pattern: String) -> WatchexecBuilder {
+  WatchexecBuilder(..builder, ignores: [pattern, ..builder.ignores])
+}
+
+/// Start an instance of the watchexec program as an Erlang port.
+///
+/// The port will send messages to the process that started it.
+///
+/// The port and the watchexec process will be shut-down when the process that
+/// starts exits.
+///
 pub fn start(
-  watching directory: String,
+  builder: WatchexecBuilder,
 ) -> Result(WatchexecInstance, WatchexecError) {
   use path <- result.try(
     sceall.find_executable("watchexec")
     |> result.replace_error(WatchexecExecutableNotFound),
   )
+  let watched = list.flat_map(builder.watched, fn(p) { ["--watch", p] })
+  let filters = list.flat_map(builder.filters, fn(p) { ["--filter", p] })
+  let ignores = list.flat_map(builder.ignores, fn(p) { ["--ignore", p] })
   let program =
     sceall.spawn_program(
       executable_path: path,
-      working_directory: directory,
-      command_line_arguments: [
-        "--only-emit-events",
-        "--emit-events-to=stdio",
-        "--no-discover-ignore",
-      ],
+      working_directory: ".",
+      command_line_arguments: list.flatten([
+        [
+          "--only-emit-events",
+          "--emit-events-to=stdio",
+          "--ignore-nothing",
+        ],
+        watched,
+        filters,
+        ignores,
+      ]),
       environment_variables: [],
     )
   case program {
@@ -138,14 +183,16 @@ pub fn start(
   }
 }
 
-// TODO: test
-// TODO: document
+/// Stop a watchexec instance.
+///
+/// Returns false if it was already stopped.
+///
 pub fn stop(watchexec: WatchexecInstance) -> Bool {
   sceall.exit_program(watchexec.program)
 }
 
-// TODO: test
-// TODO: document
+/// Select messages from a watchexec instance.
+///
 pub fn select(
   selector: process.Selector(message),
   watchexec: WatchexecInstance,
@@ -156,8 +203,17 @@ pub fn select(
   })
 }
 
-// TODO: test
-// TODO: document
+/// Parse data received via a message from a watchexec instance.
+///
+/// watchexec messages can spread over multiple messages (say if they are
+/// too large for a single message), so there are separate receive and
+/// parse stages.
+///
+/// Parsing data returns an updated `watchexec` instance. Be sure to always
+/// use the latest one when parsing a message. Assigning the new instance
+/// to the same variable as the old one is good as it will prevent the old
+/// one from being used my mistake.
+///
 pub fn parse_data(
   watchexec: WatchexecInstance,
   data: WatchexecData,
